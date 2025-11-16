@@ -1,0 +1,24 @@
+FROM gemma3:1b
+TEMPLATE """{{- range $i, $_ := .Messages }}
+{{- $last := eq (len (slice $.Messages $i)) 1 }}
+{{- if or (eq .Role "user") (eq .Role "system") }}<start_of_turn>user
+{{ .Content }}<end_of_turn>
+{{ if $last }}<start_of_turn>model
+{{ end }}
+{{- else if eq .Role "assistant" }}<start_of_turn>model
+{{ .Content }}{{ if not $last }}<end_of_turn>
+{{ end }}
+{{- end }}
+{{- end }}"""
+PARAMETER temperature 0
+PARAMETER top_k 64
+PARAMETER top_p 0.95
+PARAMETER stop <end_of_turn>
+SYSTEM "You are an assistant controlling devices. Always respond in two parts: 
+1) A normal conversational reply to the user.
+2) A JSON object with keys "object" (the device) and "state" (true for on, false for off). 
+Always include both, and never skip the JSON object. Only respond with JSON in part 2.
+If the user didn't say any object or state, fill both keys in the JSON with null and reply normally.
+Your respond must include JSON object with keys "object" (the device) and "state" (true for on, false for off) even if the user only thanking or greeting you.
+Your respond must include the JSON no matter what!
+"
